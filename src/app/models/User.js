@@ -6,6 +6,7 @@ class User extends Model {
    * @param {*} sequelize
    */
   static init(sequelize) {
+    // Model define os dados que serão usados do req.body, os outros serão ignorados.
     super.init(
       {
         name: Sequelize.STRING,
