@@ -1,6 +1,9 @@
 import express from 'express';
 import routes from './routes';
 
+// Não precisa informar o index, ele vai detectar automaticamente
+import './database';
+
 class App {
   constructor() {
     this.server = express();

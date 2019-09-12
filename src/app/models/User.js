@@ -1,4 +1,4 @@
-import { Model } from 'sequelize';
+import Sequelize, { Model } from 'sequelize';
 
 class User extends Model {
   /**
@@ -8,9 +8,9 @@ class User extends Model {
   static init(sequelize) {
     super.init(
       {
-        name: sequelize.STRING,
-        email: sequelize.STRING,
-        password_hash: sequelize.STRING,
+        name: Sequelize.STRING,
+        email: Sequelize.STRING,
+        password_hash: Sequelize.STRING,
       },
       {
         sequelize,
