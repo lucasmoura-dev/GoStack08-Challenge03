@@ -23,16 +23,20 @@ class User extends Model {
     );
 
     /**
-     * Vai ser executado antes de salvar/editar um usuário
+     * Vai ser executado antes de salvar/editar um usuário.
+     * O hash só será gerado quando estiver alterando uma senha.
      */
     this.addHook('beforeSave', async user => {
-      // O hash só será gerado quando estiver alterando uma senha
       if (user.password) {
         user.password_hash = await bcrypt.hash(user.password, 8);
       }
     });
 
     return this; // retorna o model que foi inicializado aqui
+  }
+
+  checkPassword(password) {
+    return bcrypt.compare(password, this.password_hash);
   }
 }
 
