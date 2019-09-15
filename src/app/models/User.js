@@ -36,7 +36,7 @@ class User extends Model {
   }
 
   static associate(models) {
-    this.belongsTo(models.File, { foreignKey: 'avatar_id' });
+    this.belongsTo(models.File, { foreignKey: 'avatar_id', as: 'avatar' });
     /*
     belongsTo -> tem a referência de um arquivo dentro da tabela Users;
     hasOne -> seria ao contrário, seria o Id do usuário dentro da tabela files;
