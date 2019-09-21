@@ -32,5 +32,6 @@ routes.put('/meetups/:id', MeetupController.update);
 
 /* Own Meetups */
 routes.get('/my/meetups', OwnMeetupController.index);
+routes.delete('/my/meetups/:id', OwnMeetupController.delete);
 
 export default routes;
