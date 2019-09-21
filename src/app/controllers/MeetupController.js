@@ -94,6 +94,50 @@ class MeetupController {
 
     return res.json(meetup);
   }
+
+  async update(req, res) {
+    const schema = Yup.object().shape({
+      title: Yup.string(),
+      date: Yup.date(),
+      location: Yup.string(),
+      banner_id: Yup.number(),
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ error: 'Validation fails' });
+    }
+
+    const meetup = await Meetup.findByPk(req.params.id);
+
+    if (!meetup) {
+      return res.status(404).json({ error: 'Meetup not found' });
+    }
+
+    const hourStart = startOfHour(meetup.date);
+
+    if (isBefore(hourStart, new Date())) {
+      return res.status(400).json({ error: 'Past dates are not permitted' });
+    }
+
+    if (meetup.user_id !== req.userId) {
+      return res
+        .status(401)
+        .json({ error: "You don't have permission to edit this meetup." });
+    }
+
+    const { id, title, date, location, banner_id } = await meetup.update(
+      req.body
+    );
+
+    // O usuário também deve poder editar todos dados de meetups que ainda não aconteceram e que ele é organizador.
+    return res.send({
+      id,
+      title,
+      date,
+      location,
+      banner_id,
+    });
+  }
 }
 
 export default new MeetupController();
