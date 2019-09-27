@@ -10,6 +10,7 @@ class SubscriptionController {
       meetup_id: Yup.number().required(),
     });
 
+    /* Verifca a validação dos campos */
     if (!(await schema.isValid(req.body))) {
       return res.status(400).json({ error: 'Validation fails' });
     }
@@ -18,6 +19,7 @@ class SubscriptionController {
 
     const meetup = await Meetup.findByPk(meetup_id);
 
+    /* Verifica se está se inscrevendo no próprio Meetup */
     if (meetup.user_id === req.userId) {
       return res
         .status(400)
@@ -26,6 +28,7 @@ class SubscriptionController {
 
     const hourStart = startOfHour(parseISO(meetup.date));
 
+    /* Verifica se o horário do Meetup já passou */
     if (isBefore(hourStart, new Date())) {
       return res.status(400).json({ error: 'Past dates are not permitted.' });
     }
@@ -37,10 +40,31 @@ class SubscriptionController {
       },
     });
 
+    /* Verifica se já está registrado no evento */
     if (hasSubscribed) {
       return res
         .status(400)
         .json({ error: 'You are already registered for this event.' });
+    }
+
+    const containsSameTimeMeetup = await Subscription.findAll({
+      where: {
+        user_id: req.userId,
+      },
+      include: {
+        model: Meetup,
+        as: 'meetup',
+        where: {
+          date: meetup.date,
+        },
+      },
+    });
+
+    /* Verifica se já está inscrito em outro Meetup no mesmo horário */
+    if (containsSameTimeMeetup) {
+      return res.status(400).json({
+        error: 'You are already registered for an event at the same time.',
+      });
     }
 
     const subscription = await Subscription.create({
