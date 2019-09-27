@@ -3,6 +3,7 @@ import { parseISO, startOfHour, isBefore } from 'date-fns';
 import User from '../models/User';
 import Meetup from '../models/Meetup';
 import Subscription from '../models/Subscription';
+import Mail from '../../lib/Mail';
 
 class SubscriptionController {
   async store(req, res) {
@@ -17,7 +18,13 @@ class SubscriptionController {
 
     const { meetup_id } = req.body;
 
-    const meetup = await Meetup.findByPk(meetup_id);
+    const meetup = await Meetup.findByPk(meetup_id, {
+      include: {
+        model: User,
+        as: 'organizer',
+        attributes: ['name', 'email'],
+      },
+    });
 
     /* Verifica se está se inscrevendo no próprio Meetup */
     if (meetup.user_id === req.userId) {
@@ -61,7 +68,7 @@ class SubscriptionController {
     });
 
     /* Verifica se já está inscrito em outro Meetup no mesmo horário */
-    if (containsSameTimeMeetup) {
+    if (containsSameTimeMeetup.length > 0) {
       return res.status(400).json({
         error: 'You are already registered for an event at the same time.',
       });
@@ -70,6 +77,12 @@ class SubscriptionController {
     const subscription = await Subscription.create({
       user_id: req.userId,
       meetup_id,
+    });
+
+    await Mail.sendMail({
+      to: `${meetup.organizer.name} <${meetup.organizer.email}>`,
+      subject: `New subscriber`,
+      text: 'You have a new subscriber',
     });
 
     return res.json(subscription);
