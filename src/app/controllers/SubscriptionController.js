@@ -1,5 +1,6 @@
 import * as Yup from 'yup';
-import { parseISO, startOfHour, isBefore } from 'date-fns';
+import { parseISO, startOfHour, isBefore, format } from 'date-fns';
+import pt from 'date-fns/locale/pt';
 import User from '../models/User';
 import Meetup from '../models/Meetup';
 import Subscription from '../models/Subscription';
@@ -79,10 +80,20 @@ class SubscriptionController {
       meetup_id,
     });
 
+    const { name: username } = await User.findByPk(req.userId);
+
     await Mail.sendMail({
       to: `${meetup.organizer.name} <${meetup.organizer.email}>`,
       subject: `New subscriber`,
-      text: 'You have a new subscriber',
+      template: 'subscription',
+      context: {
+        organizer: meetup.organizer.name,
+        meetup: meetup.title,
+        user: username,
+        date: format(new Date(), "'day' dd 'de' MMMM', às' H:mm'h'", {
+          locale: pt,
+        }),
+      },
     });
 
     return res.json(subscription);
