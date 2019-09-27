@@ -6,6 +6,9 @@ import Meetup from '../models/Meetup';
 import Subscription from '../models/Subscription';
 import Mail from '../../lib/Mail';
 
+import SubscriptionMail from '../jobs/SubscriptionMail';
+import Queue from '../../lib/Queue';
+
 class SubscriptionController {
   async store(req, res) {
     const schema = Yup.object().shape({
@@ -82,18 +85,9 @@ class SubscriptionController {
 
     const { name: username } = await User.findByPk(req.userId);
 
-    await Mail.sendMail({
-      to: `${meetup.organizer.name} <${meetup.organizer.email}>`,
-      subject: `New subscriber`,
-      template: 'subscription',
-      context: {
-        organizer: meetup.organizer.name,
-        meetup: meetup.title,
-        user: username,
-        date: format(new Date(), "'day' dd 'de' MMMM', às' H:mm'h'", {
-          locale: pt,
-        }),
-      },
+    await Queue.add(SubscriptionMail.key, {
+      meetup,
+      username,
     });
 
     return res.json(subscription);
