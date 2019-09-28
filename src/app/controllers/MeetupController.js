@@ -14,33 +14,23 @@ import File from '../models/File';
 
 class MeetupController {
   async index(req, res) {
-    const { date, page = 1, pageSize = 10 } = req.query;
+    const where = {};
+    const { page = 1, pageSize = 10 } = req.query;
 
-    const parsedDate = parseISO(date);
+    if (req.query.date) {
+      const parsedDate = parseISO(req.query.date);
+      where.date = {
+        [Op.between]: [startOfDay(parsedDate), endOfDay(parsedDate)],
+      };
+    }
 
     const meetups = await Meetup.findAll({
-      where: {
-        date: {
-          [Op.between]: [startOfDay(parsedDate), endOfDay(parsedDate)],
-        },
-      },
-      attributes: ['id', 'title', 'date', 'description', 'location'],
+      where,
       order: ['date'],
       limit: pageSize,
       offset: (page - 1) * pageSize,
       include: [
-        {
-          model: User,
-          as: 'organizer',
-          attributes: ['id', 'name', 'email'],
-          include: [
-            {
-              model: File,
-              as: 'avatar',
-              attributes: ['id', 'path', 'url'],
-            },
-          ],
-        },
+        User,
         {
           model: File,
           as: 'banner',
@@ -64,14 +54,10 @@ class MeetupController {
       return res.status(400).json({ error: 'Validation fails' });
     }
 
-    const { title, date, description, location, banner_id } = req.body;
-
-    const hourStart = startOfHour(parseISO(date));
-
     /**
      * Check for past dates
      */
-    if (isBefore(hourStart, new Date())) {
+    if (isBefore(startOfHour(parseISO(req.body.date)), new Date())) {
       return res.status(400).json({ error: 'Past dates are not permitted' });
     }
 
@@ -84,11 +70,7 @@ class MeetupController {
     */
 
     const meetup = Meetup.create({
-      title,
-      date,
-      description,
-      location,
-      banner_id,
+      ...req.body,
       user_id: req.userId,
     });
 
@@ -113,9 +95,7 @@ class MeetupController {
       return res.status(404).json({ error: 'Meetup not found' });
     }
 
-    const hourStart = startOfHour(meetup.date);
-
-    if (isBefore(hourStart, new Date())) {
+    if (isBefore(parseISO(req.body.date), new Date())) {
       return res.status(400).json({ error: 'Past dates are not permitted' });
     }
 
@@ -125,18 +105,27 @@ class MeetupController {
         .json({ error: "You don't have permission to edit this meetup." });
     }
 
-    const { id, title, date, location, banner_id } = await meetup.update(
-      req.body
-    );
+    await meetup.update(req.body);
 
-    // O usuário também deve poder editar todos dados de meetups que ainda não aconteceram e que ele é organizador.
-    return res.send({
-      id,
-      title,
-      date,
-      location,
-      banner_id,
-    });
+    return res.send(meetup);
+  }
+
+  async delete(req, res) {
+    const user_id = req.userId;
+
+    const meetup = await Meetup.findByPk(req.params.id);
+
+    if (meetup.user_id !== user_id) {
+      return res.status(401).json({ error: 'Not authorized. ' });
+    }
+
+    if (meetup.past) {
+      return res.status(400).json({ error: "Can't delete past meetups." });
+    }
+
+    await meetup.destroy();
+
+    return res.send();
   }
 }
 
