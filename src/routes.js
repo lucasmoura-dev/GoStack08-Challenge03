@@ -35,7 +35,6 @@ routes.delete('/organizing/:id', OrganizingController.delete);
 
 /* Subscriptions */
 routes.get('/subscriptions', SubscriptionController.index);
-// olhar aqui abaixo
-routes.post('/subscriptions', SubscriptionController.store);
+routes.post('/meetups/:meetupId/subscriptions', SubscriptionController.store);
 
 export default routes;

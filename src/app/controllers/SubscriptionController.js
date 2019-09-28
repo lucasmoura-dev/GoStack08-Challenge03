@@ -11,42 +11,26 @@ import Queue from '../../lib/Queue';
 class SubscriptionController {
   async index(req, res) {
     // new Date() < meetup.date
-    const meetups = await Subscription.findAll({
+    const subscriptions = await Subscription.findAll({
       where: {
         user_id: req.userId,
       },
       include: {
         model: Meetup,
-        as: 'meetup',
-        order: ['date'],
         where: {
           date: {
             [Op.gt]: new Date(),
           },
         },
       },
+      order: [[Meetup, 'date']],
     });
-    return res.json(meetups);
+    return res.json(subscriptions);
   }
 
   async store(req, res) {
-    const schema = Yup.object().shape({
-      meetup_id: Yup.number().required(),
-    });
-
-    /* Verifca a validação dos campos */
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validation fails' });
-    }
-
-    const { meetup_id } = req.body;
-
-    const meetup = await Meetup.findByPk(meetup_id, {
-      include: {
-        model: User,
-        as: 'organizer',
-        attributes: ['name', 'email'],
-      },
+    const meetup = await Meetup.findByPk(req.params.meetupId, {
+      include: [User],
     });
 
     /* Verifica se está se inscrevendo no próprio Meetup */
@@ -56,17 +40,17 @@ class SubscriptionController {
         .json({ error: "You can't subscribe your own meetup" });
     }
 
-    const hourStart = startOfHour(parseISO(meetup.date));
-
     /* Verifica se o horário do Meetup já passou */
-    if (isBefore(hourStart, new Date())) {
-      return res.status(400).json({ error: 'Past dates are not permitted.' });
+    if (meetup.past) {
+      return res
+        .status(400)
+        .json({ error: "Can't subscribe to past meetups." });
     }
 
     const hasSubscribed = await Subscription.findOne({
       where: {
         user_id: req.userId,
-        meetup_id,
+        meetup_id: meetup.id,
       },
     });
 
@@ -77,13 +61,13 @@ class SubscriptionController {
         .json({ error: 'You are already registered for this event.' });
     }
 
-    const containsSameTimeMeetup = await Subscription.findAll({
+    const containsSameTimeMeetup = await Subscription.findOne({
       where: {
         user_id: req.userId,
       },
       include: {
         model: Meetup,
-        as: 'meetup',
+        required: true,
         where: {
           date: meetup.date,
         },
@@ -91,22 +75,22 @@ class SubscriptionController {
     });
 
     /* Verifica se já está inscrito em outro Meetup no mesmo horário */
-    if (containsSameTimeMeetup.length > 0) {
+    if (containsSameTimeMeetup) {
       return res.status(400).json({
-        error: 'You are already registered for an event at the same time.',
+        error: "Can't subscribe to two meetups at the same time.",
       });
     }
 
     const subscription = await Subscription.create({
       user_id: req.userId,
-      meetup_id,
+      meetup_id: meetup.id,
     });
 
-    const { name: username } = await User.findByPk(req.userId);
+    const user = await User.findByPk(req.userId);
 
     await Queue.add(SubscriptionMail.key, {
       meetup,
-      username,
+      user,
     });
 
     return res.json(subscription);
