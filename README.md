@@ -6,7 +6,7 @@ Used tools:
 - Sucrase + Nodemon;
 - ESLint + Prettier + EditorConfig;
 - Sequelize (PostgresSQL);
-- Docker;
+- Docker (postgres and sentry);
 - Multer (file upload);
 - Nodemailer (for sending emails);
 - Mailtrap (test sending emails in development environment);
