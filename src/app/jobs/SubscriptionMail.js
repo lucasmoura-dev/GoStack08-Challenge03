@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-import pt from 'date-fns/locale/pt';
 import Mail from '../../lib/Mail';
 
 class SubscriptionMail {
@@ -19,9 +17,7 @@ class SubscriptionMail {
         organizer: meetup.organizer.name,
         meetup: meetup.title,
         user: username,
-        date: format(new Date(), "'day' dd 'de' MMMM', às' H:mm'h'", {
-          locale: pt,
-        }),
+        email: meetup.organizer.email,
       },
     });
   }
